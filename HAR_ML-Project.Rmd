@@ -2,8 +2,10 @@
 title: "HAR Final Assessment"
 author: "Mathias Barat"
 subtitle: Practical Machine Learning Project
-job: www.dendropolis.org
+output: pdf_document
+publish: https://rpubs.com/MathiasBarat/670465
 logo: null
+job: www.dendropolis.org
 ---
 
 ## 1 - SYNOPSIS
