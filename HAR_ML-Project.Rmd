@@ -1,0 +1,151 @@
+---
+title: "HAR Final Assessment"
+author: "Mathias Barat"
+subtitle: Practical Machine Learning Project
+job: www.dendropolis.org
+logo: null
+---
+
+## 1 - SYNOPSIS
+
+### Context
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively.
+
+These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks.
+
+### Problem
+
+One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.
+
+### Goal of the project
+
+Use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+### Dataset information
+
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
+Read more: http://groupware.les.inf.puc-rio.br/har#ixzz6ZuaJcLo0
+
+## 2 - DATASETS
+
+### Downloading file:
+```{r}
+
+train_url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+test_url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+if (!file.exists("data/training.csv") | !file.exists("data/testing.csv")){
+  download.file(train_url, destfile = "data/training.csv")
+  download.file(test_url, destfile = "data/testing.csv")
+}
+
+training <- read.csv("data/training.csv", na.strings=c("NA","#DIV/0!", ""))
+testing <- read.csv("data/testing.csv",na.strings=c("NA","#DIV/0!", ""))
+```
+
+### Exploratory Data Analysis
+```{r}
+summary(training$classe)
+unique(training$classe)
+training$classe <- factor(training$classe)
+```
+
+### Cleaning
+Suppress all NA in the dataset
+```{r}
+training <- training[,colSums(is.na(training)) == 0]
+testing <- testing[,colSums(is.na(training)) == 0]
+```
+
+### Suppress useless columns
+```{r}
+# X, user_name, timestamps, windows
+training <- training[,-c(1:7)]
+testing <- testing[,-c(1:7)]
+```
+
+### testing, training and quizz datasets
+To avoid errors I rename the datasets and create my own training, testing dataset
+```{r}
+library(caret)
+test_quizz <- testing
+inTrain <- createDataPartition(training$classe, p = 0.8, list = FALSE)
+temp <- training
+training <- temp[inTrain,]
+testing <- temp[-inTrain,]
+rm(temp)
+```
+
+### final dataset
+```{r}
+# Training dataset:
+dim(training)
+# Testing dataset:
+dim(testing)
+# Testing dataset
+dim(test_quizz)
+```
+
+### Histogram of Y
+```{r}
+library(ggplot2)
+ggplot(training, aes(x=classe)) + geom_histogram(stat = "count", fill="red")+ labs(title="Classe count for the training dataset")
+```
+
+## 3 - Recursive Partition modeling
+
+```{r cache=TRUE}
+library(ggplot2); library(caret); library(randomForest); library(rpart)
+
+modfit_rpart <- rpart(classe ~ ., data=training, method="class")
+
+predict_rpart <- predict(modfit_rpart, testing, type = "class")
+
+```
+
+```{r}
+library(rattle)
+fancyRpartPlot(modfit_rpart, cex= 0.5)
+```
+
+
+```{r}
+
+confusionMatrix(predict_rpart, testing$classe)
+
+```
+---
+
+## 4 - Random Forest Modeling
+
+```{r}
+library(randomForest)
+modfit_rforest <- randomForest(classe ~ .,data=training, method = "class", keep.inbag = TRUE)
+predict_rforest <- predict(modfit_rforest, testing, type = "class")
+
+modfit_rforest
+
+```
+```{r}
+varImpPlot(modfit_rforest, cex = 0.8 ) 
+```
+
+```{r}
+confusionMatrix(predict_rforest, testing$classe)
+```
+## 5 - Conclusion
+
+### Model choice
+The Random forest gets an accuracy of 0.9949 versus a 0.7353. Without any doubt the Random forest is seriously the best for our case.
+
+### Quizz prediction with the test set
+```{r}
+
+predict_quizz <- predict(modfit_rforest, test_quizz, type = "class")
+predict_quizz
+
+```
+
